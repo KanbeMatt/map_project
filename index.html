@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vietnam POI Finder</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+  />
+
+  <style>
+    #map {
+      height: 500px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Tìm 5 điểm POI gần một địa điểm ở Việt Nam</h2>
+
+  <input id="locationInput" type="text" placeholder="Nhập tên địa điểm (VD: Da Nang)">
+  <button onclick="searchLocation()">Tìm kiếm</button>
+
+  <div id="map"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js">
+  </script>
+
+  <script src="main.js"></script>
+</body>
+</html>

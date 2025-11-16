@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Vibe UI + Firebase</title>
+  <!-- Tailwind CDN (JIT) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui"] },
+          colors: {
+            brand: {
+              50:"#eef2ff",100:"#e0e7ff",200:"#c7d2fe",300:"#a5b4fc",
+              400:"#818cf8",500:"#6366f1",600:"#4f46e5",700:"#4338ca",
+              800:"#3730a3",900:"#312e81"
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 text-slate-900">
+  <div class="max-w-4xl mx-auto p-6">
+    <!-- Header -->
+    <header class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-2xl bg-brand-600 shadow-lg"></div>
+        <h1 class="text-2xl font-bold tracking-tight">Vibe UI</h1>
+      </div>
+      <div id="authArea" class="flex items-center gap-3">
+        <button id="btnSignIn" class="hidden px-4 py-2 rounded-xl bg-brand-600 text-white font-semibold shadow hover:bg-brand-700 active:scale-[.98]">
+          Đăng nhập Google
+        </button>
+        <div id="userChip" class="hidden items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200 shadow">
+          <img id="avatar" class="h-7 w-7 rounded-full" alt="avatar">
+          <span id="displayName" class="text-sm font-semibold"></span>
+          <button id="btnSignOut" class="ml-2 text-xs px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200">Thoát</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="mt-8">
+      <div class="rounded-3xl p-6 md:p-10 bg-white border border-slate-200 shadow-xl">
+        <h2 class="text-xl md:text-2xl font-bold">Tạo giao diện nhanh • Đẹp • Có dữ liệu</h2>
+        <p class="mt-2 text-slate-600">Mẫu tối giản để bắt đầu: Tailwind + Firebase Auth + Firestore.</p>
+
+        <div class="mt-6 grid md:grid-cols-3 gap-4">
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p class="font-semibold">Auth</p>
+            <p class="text-sm text-slate-600">Đăng nhập Google siêu nhanh.</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p class="font-semibold">Firestore</p>
+            <p class="text-sm text-slate-600">Lưu & đọc note theo thời gian thực.</p>
+          </div>
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p class="font-semibold">UI Vibe</p>
+            <p class="text-sm text-slate-600">Thẻ, bóng đổ, góc bo 2xl, gradient.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- App Card -->
+    <section class="mt-8">
+      <div class="rounded-3xl p-6 bg-white border border-slate-200 shadow-xl">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="text-lg font-semibold">Notes của bạn</h3>
+          <span id="authHint" class="text-sm text-slate-500">Hãy đăng nhập để tạo note.</span>
+        </div>
+
+        <form id="noteForm" class="mt-4 grid md:grid-cols-[1fr_auto] gap-3">
+          <input id="noteInput" type="text" placeholder="Viết gì đó..." class="px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-100" />
+          <button class="px-5 py-3 rounded-xl bg-brand-600 text-white font-semibold shadow hover:bg-brand-700 disabled:opacity-50" disabled>
+            Thêm
+          </button>
+        </form>
+
+        <ul id="noteList" class="mt-4 space-y-2"></ul>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-10 text-center text-sm text-slate-500">
+      Made with ♥ in Codespaces / Google IDX
+    </footer>
+  </div>
+
+  <!-- Firebase SDKs (v10+ modular via CDN) -->
+  <script type="module">
+    // 1) Thay cấu hình dưới bằng project của bạn (Firebase console -> Web app)
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    const firebaseConfig = {
+        apiKey: "AIzaSyD3QZcTqFUGSjLdf3gcgcViP7IN9CXTcd8",
+        authDomain: "map-project-961ff.firebaseapp.com",
+        projectId: "map-project-961ff",
+        storageBucket: "map-project-961ff.firebasestorage.app",
+        messagingSenderId: "687944865784",
+        appId: "1:687944865784:web:b81e53c6d28108a68d280d",
+        measurementId: "G-LPDM1RREL8"
+    };
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // UI elements
+    const btnSignIn = document.getElementById("btnSignIn");
+    const btnSignOut = document.getElementById("btnSignOut");
+    const userChip = document.getElementById("userChip");
+    const avatar = document.getElementById("avatar");
+    const displayName = document.getElementById("displayName");
+    const authHint = document.getElementById("authHint");
+    const noteForm = document.getElementById("noteForm");
+    const noteInput = document.getElementById("noteInput");
+    const noteList = document.getElementById("noteList");
+
+    const provider = new GoogleAuthProvider();
+
+    // Auth UI
+    btnSignIn.classList.remove("hidden");
+    btnSignIn.addEventListener("click", async () => {
+      try { await signInWithPopup(auth, provider); } 
+      catch (e) { alert(e.message); }
+    });
+    btnSignOut.addEventListener("click", () => signOut(auth));
+
+    let unsubNotes = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Show user chip
+        btnSignIn.classList.add("hidden");
+        userChip.classList.remove("hidden");
+        userChip.classList.add("flex");
+        avatar.src = user.photoURL || "https://ui-avatars.com/api/?name="+encodeURIComponent(user.displayName||"U");
+        displayName.textContent = user.displayName || user.email;
+
+        authHint.textContent = "Bạn đã đăng nhập. Viết note để lưu!";
+        noteForm.querySelector("button").disabled = false;
+
+        // Subscribe user's notes
+        if (unsubNotes) unsubNotes();
+        const q = query(
+          collection(db, "notes"),
+          where("uid", "==", user.uid),
+          orderBy("createdAt", "desc")
+        );
+        unsubNotes = onSnapshot(q, (snap) => {
+          noteList.innerHTML = "";
+          snap.forEach((doc) => {
+            const li = document.createElement("li");
+            const data = doc.data();
+            li.className = "flex items-center justify-between px-4 py-3 rounded-xl border bg-slate-50 border-slate-200";
+            li.innerHTML = `
+              <span class="truncate">${data.text}</span>
+              <span class="text-xs text-slate-500">${data.createdAt?.toDate?.().toLocaleString() || "..."}</span>
+            `;
+            noteList.appendChild(li);
+          });
+        });
+
+      } else {
+        // Signed out
+        btnSignIn.classList.remove("hidden");
+        userChip.classList.add("hidden");
+        userChip.classList.remove("flex");
+        authHint.textContent = "Hãy đăng nhập để tạo note.";
+        noteForm.querySelector("button").disabled = true;
+        noteList.innerHTML = "";
+        if (unsubNotes) { unsubNotes(); unsubNotes = null; }
+      }
+    });
+
+    // Add note
+    noteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const user = auth.currentUser;
+      const text = (noteInput.value || "").trim();
+      if (!user || !text) return;
+      try {
+        await addDoc(collection(db, "notes"), {
+          uid: user.uid,
+          text,
+          createdAt: serverTimestamp()
+        });
+        noteInput.value = "";
+        noteInput.focus();
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+  </script>
+</body>
+</html>
